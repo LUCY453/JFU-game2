@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录测试 - 继父大逃亡</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            min-width: 400px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .status h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>登录功能测试</h1>
+        
+        <div id="message" class="message"></div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>处理中...</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" name="username" value="admin" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" name="password" value="123456" required>
+            </div>
+            
+            <button type="submit">登录</button>
+            <button type="button" onclick="testRegister()">测试注册</button>
+            <button type="button" onclick="clearStorage()">清除存储</button>
+        </form>
+        
+        <div class="status">
+            <h3>系统状态</h3>
+            <p><strong>当前用户:</strong> <span id="currentUser">未登录</span></p>
+            <p><strong>Token状态:</strong> <span id="tokenStatus">无</span></p>
+            <p><strong>本地存储:</strong> <span id="storageStatus">空</span></p>
+            <p><strong>API状态:</strong> <span id="apiStatus">未测试</span></p>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="testAPI()">测试API连接</button>
+            <button onclick="checkStatus()">检查状态</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentUser = null;
+        
+        // 页面加载时检查状态
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+            
+            // 绑定表单提交事件
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                testLogin();
+            });
+        });
+        
+        // 显示消息
+        function showMessage(text, type = 'info') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+            
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        // 测试登录
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showMessage('请输入用户名和密码', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    showMessage('登录成功！', 'success');
+                    checkStatus();
+                } else {
+                    showMessage(`登录失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`网络错误: ${error.message}`, 'error');
+                updateAPIStatus('连接失败');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 测试注册
+        async function testRegister() {
+            const username = 'testuser' + Date.now();
+            const password = '123456';
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`注册成功！用户名: ${username}`, 'success');
+                    document.getElementById('username').value = username;
+                    document.getElementById('password').value = password;
+                } else {
+                    showMessage(`注册失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`网络错误: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 测试API连接
+        async function testAPI() {
+            showLoading(true);
+            updateAPIStatus('测试中...');
+            
+            try {
+                const response = await fetch('/api/test', {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    updateAPIStatus('连接正常');
+                    showMessage('API连接正常', 'success');
+                } else {
+                    updateAPIStatus(`HTTP ${response.status}`);
+                    showMessage(`API响应错误: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                updateAPIStatus('连接失败');
+                showMessage(`API连接失败: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 检查状态
+        function checkStatus() {
+            // 检查当前用户
+            const user = localStorage.getItem('user');
+            if (user) {
+                try {
+                    currentUser = JSON.parse(user);
+                    document.getElementById('currentUser').textContent = currentUser.username;
+                } catch (e) {
+                    document.getElementById('currentUser').textContent = '数据错误';
+                }
+            } else {
+                document.getElementById('currentUser').textContent = '未登录';
+            }
+            
+            // 检查Token
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('tokenStatus').textContent = `存在 (${token.substring(0, 20)}...)`;
+            } else {
+                document.getElementById('tokenStatus').textContent = '无';
+            }
+            
+            // 检查本地存储
+            const storageKeys = Object.keys(localStorage);
+            document.getElementById('storageStatus').textContent = 
+                storageKeys.length > 0 ? `${storageKeys.length} 项: ${storageKeys.join(', ')}` : '空';
+        }
+        
+        // 更新API状态
+        function updateAPIStatus(status) {
+            document.getElementById('apiStatus').textContent = status;
+        }
+        
+        // 清除存储
+        function clearStorage() {
+            localStorage.clear();
+            currentUser = null;
+            showMessage('本地存储已清除', 'success');
+            checkStatus();
+        }
+    </script>
+</body>
+</html>

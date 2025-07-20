@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子围栏测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        .controls button {
+            margin: 5px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        #fenceCanvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: crosshair;
+            display: block;
+            margin: 20px auto;
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚧 电子围栏测试</h1>
+        
+        <div class="status">
+            <span>围栏状态: </span>
+            <span id="fenceStatus">未启用</span>
+        </div>
+        
+        <div class="controls">
+            <button id="drawBtn" onclick="toggleDrawing()" class="btn-primary">开始绘制</button>
+            <button onclick="clearFence()" class="btn-warning">清空围栏</button>
+            <button onclick="applyFence()" class="btn-success">应用围栏</button>
+            <button id="toggleBtn" onclick="toggleFence()" class="btn-danger">启用围栏</button>
+        </div>
+        
+        <canvas id="fenceCanvas" width="600" height="600"></canvas>
+        
+        <div class="instructions">
+            <h3>使用说明:</h3>
+            <ul>
+                <li>🖱️ 点击"开始绘制"进入绘制模式</li>
+                <li>📍 在地图上点击添加围栏边界点</li>
+                <li>🔗 至少需要3个点形成围栏</li>
+                <li>✅ 点击"应用围栏"保存设置</li>
+                <li>🔴 点击"启用围栏"激活限制</li>
+            </ul>
+        </div>
+        
+        <div id="pointsList">
+            <h3>围栏点列表:</h3>
+            <div id="points"></div>
+        </div>
+    </div>
+
+    <script>
+        let canvas = document.getElementById('fenceCanvas');
+        let ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let fencePoints = [];
+        let fenceEnabled = false;
+
+        // 绘制基础地图
+        function drawBaseMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 草地背景
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 道路网格
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            
+            // 主干道
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            
+            // 次要道路
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 6; i++) {
+                if (i !== 3) {
+                    let pos = (i / 6) * canvas.width;
+                    ctx.beginPath();
+                    ctx.moveTo(0, pos);
+                    ctx.lineTo(canvas.width, pos);
+                    ctx.moveTo(pos, 0);
+                    ctx.lineTo(pos, canvas.height);
+                    ctx.stroke();
+                }
+            }
+            
+            // 边界
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            // 坐标标记
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('-100', 10, 20);
+            ctx.fillText('100', canvas.width - 30, 20);
+            ctx.fillText('-100', 10, canvas.height - 10);
+            ctx.fillText('100', canvas.width - 30, canvas.height - 10);
+        }
+
+        // 绘制围栏
+        function drawFence() {
+            if (fencePoints.length === 0) return;
+            
+            // 绘制围栏点
+            ctx.fillStyle = '#0066ff';
+            fencePoints.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            
+            // 绘制围栏线
+            if (fencePoints.length > 1) {
+                ctx.strokeStyle = fenceEnabled ? '#ff0000' : '#ff6666';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(fencePoints[0].x, fencePoints[0].y);
+                
+                for (let i = 1; i < fencePoints.length; i++) {
+                    ctx.lineTo(fencePoints[i].x, fencePoints[i].y);
+                }
+                
+                // 闭合围栏
+                if (fencePoints.length >= 3) {
+                    ctx.lineTo(fencePoints[0].x, fencePoints[0].y);
+                }
+                
+                ctx.stroke();
+            }
+        }
+
+        // 更新显示
+        function updateDisplay() {
+            drawBaseMap();
+            drawFence();
+            updatePointsList();
+            updateStatus();
+        }
+
+        // 更新围栏点列表
+        function updatePointsList() {
+            const pointsDiv = document.getElementById('points');
+            if (fencePoints.length === 0) {
+                pointsDiv.innerHTML = '<p>暂无围栏点</p>';
+                return;
+            }
+            
+            let html = '';
+            fencePoints.forEach((point, index) => {
+                const gameX = Math.round((point.x / canvas.width) * 200 - 100);
+                const gameZ = Math.round((point.y / canvas.height) * 200 - 100);
+                html += `<div>点 ${index + 1}: (${gameX}, ${gameZ}) <button onclick="removePoint(${index})">删除</button></div>`;
+            });
+            pointsDiv.innerHTML = html;
+        }
+
+        // 更新状态显示
+        function updateStatus() {
+            const statusSpan = document.getElementById('fenceStatus');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (fenceEnabled && fencePoints.length >= 3) {
+                statusSpan.textContent = '已启用';
+                statusSpan.style.color = '#dc3545';
+                toggleBtn.textContent = '禁用围栏';
+                toggleBtn.className = 'btn-success';
+            } else {
+                statusSpan.textContent = '未启用';
+                statusSpan.style.color = '#6c757d';
+                toggleBtn.textContent = '启用围栏';
+                toggleBtn.className = 'btn-danger';
+            }
+        }
+
+        // 切换绘制模式
+        function toggleDrawing() {
+            isDrawing = !isDrawing;
+            const drawBtn = document.getElementById('drawBtn');
+            
+            if (isDrawing) {
+                drawBtn.textContent = '停止绘制';
+                drawBtn.className = 'btn-danger';
+                canvas.style.cursor = 'crosshair';
+            } else {
+                drawBtn.textContent = '开始绘制';
+                drawBtn.className = 'btn-primary';
+                canvas.style.cursor = 'default';
+            }
+        }
+
+        // 清空围栏
+        function clearFence() {
+            fencePoints = [];
+            updateDisplay();
+        }
+
+        // 应用围栏
+        function applyFence() {
+            if (fencePoints.length < 3) {
+                alert('至少需要3个点才能形成有效围栏');
+                return;
+            }
+            alert(`围栏已应用！包含 ${fencePoints.length} 个边界点`);
+            updateDisplay();
+        }
+
+        // 切换围栏启用状态
+        function toggleFence() {
+            if (fencePoints.length < 3) {
+                alert('请先绘制围栏（至少3个点）');
+                return;
+            }
+            fenceEnabled = !fenceEnabled;
+            updateDisplay();
+        }
+
+        // 删除围栏点
+        function removePoint(index) {
+            fencePoints.splice(index, 1);
+            updateDisplay();
+        }
+
+        // 画布点击事件
+        canvas.addEventListener('click', function(event) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            fencePoints.push({ x, y });
+            updateDisplay();
+            
+            const gameX = Math.round((x / canvas.width) * 200 - 100);
+            const gameZ = Math.round((y / canvas.height) * 200 - 100);
+            console.log(`添加围栏点: (${gameX}, ${gameZ})`);
+        });
+
+        // 初始化
+        updateDisplay();
+    </script>
+</body>
+</html>
