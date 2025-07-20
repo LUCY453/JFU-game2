@@ -1,0 +1,190 @@
+/* 移动端专用样式 */
+@media (max-width: 768px) {
+  .mobile-device {
+    /* 虚拟摇杆容器 */
+    .joystick-container {
+      position: fixed;
+      bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 15px;
+      touch-action: manipulation;
+
+      /* 左右摇杆 */
+      .joystick {
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border: 2px solid #fff;
+        touch-action: none;
+
+        &.active {
+          background: rgba(255,255,255,0.5);
+        }
+      }
+    }
+
+    /* 游戏控制按钮 */
+    .game-controls {
+      position: fixed;
+      right: 15px;
+      bottom: 120px;
+      button {
+        width: 60px;
+        height: 60px;
+        margin: 10px 0;
+        border-radius: 50%;
+        font-size: 1.2em;
+        touch-action: manipulation;
+      }
+    }
+
+    /* 适配输入框 */
+    input, textarea {
+      font-size: 16px; /* 禁用iOS缩放 */
+      min-height: 44px; /* 可点击区域放大 */
+      padding: 12px 15px; /* 增加内边距 */
+      margin: 10px 0; /* 增加外边距 */
+    }
+
+    /* 创建房间表单样式 - 移动端优化 */
+    #createRoomScreen {
+      position: relative;
+      z-index: 9999; /* 确保在最上层 */
+      
+      input, button {
+        width: 100%;
+        margin: 20px 0;
+        pointer-events: auto !important;
+        touch-action: manipulation;
+      }
+      
+      input {
+        padding: 20px;
+        font-size: 18px;
+        min-height: 60px;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        background: white;
+        -webkit-appearance: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+        box-sizing: border-box;
+      }
+      
+      input:focus {
+        border-color: #4a90e2;
+        outline: none;
+      }
+      
+      button {
+        padding: 20px;
+        font-size: 1.3em;
+        min-height: 60px;
+        background: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 8px;
+      }
+      
+      /* 防止虚拟键盘遮挡 */
+      @media (max-height: 600px) {
+        padding-bottom: 50vh;
+        transform: translateY(-10%);
+      }
+    }
+    
+    /* contenteditable输入框样式 */
+    .room-name-input {
+      width: 100%;
+      min-height: 60px;
+      padding: 20px;
+      font-size: 18px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      background: white;
+      -webkit-appearance: none;
+      -webkit-tap-highlight-color: rgba(0,0,0,0);
+      box-sizing: border-box;
+      outline: none;
+      -webkit-user-select: text !important;
+      -webkit-touch-callout: default !important;
+      user-select: text !important;
+      touch-action: manipulation !important;
+      pointer-events: auto !important;
+    }
+    
+    /* placeholder效果 */
+    .room-name-input:empty:before {
+      content: attr(placeholder);
+      color: #999;
+    }
+    
+    .room-name-input:focus:empty:before {
+      content: none;
+    }
+    
+    /* 禁用全局触摸事件覆盖 */
+    #roomName, #roomName * {
+      pointer-events: auto !important;
+    }
+
+    /* 房间列表项适配 */
+    .room-item {
+      padding: 15px;
+      margin: 10px 0;
+      h3 {
+        font-size: 1.3em;
+      }
+    }
+  }
+
+  /* 防止点击高亮 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* 移动端专用按钮样式 */
+.mobile-friendly-btn {
+  padding: 12px 25px;
+  min-width: 120px;
+  font-size: 1.1em;
+  border-radius: 25px;
+  touch-action: manipulation;
+}
+
+/* 增强输入框移动端体验 */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+  touch-action: manipulation !important;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.05);
+}
+
+/* 确保输入框获得焦点时样式明显 */
+input:focus, textarea:focus, [contenteditable]:focus {
+  background-color: #fff !important;
+  border-color: #4a90e2 !important;
+  box-shadow: 0 0 0 2px rgba(74,144,226,0.2) !important;
+}
+
+/* 聊天输入框特殊优化 */
+#chatInput {
+  min-height: 50px;
+  padding: 15px;
+  line-height: 1.5;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 防止虚拟键盘遮挡重要内容 */
+@media (max-height: 600px) {
+  .input-container {
+    padding-bottom: 50vh;
+    transform: translateY(-10%);
+  }
+}
+/*sk-67a7e88eda024aada304d4cc25c82121*/
